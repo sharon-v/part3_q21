@@ -7,6 +7,7 @@ def LUdecomposition(mat, b):
     :return: none
     """
     inversL, L, counter = toUpperTriangularMat(mat)  # calculate the L matrix and the inverse L
+    print("-----------------------------")
     string = "L = "
     for i in range(1, counter):
         if i < counter - 1:
@@ -15,54 +16,56 @@ def LUdecomposition(mat, b):
             string += "invJ" + str(i)
     print(string)
     printMatrix(L, "L")  # print the L matrix
+    print("-----------------------------")
     string = "inverse L = "
-    for i in range(counter + 1, 0, -1):
-        if i < counter:
+    for i in range(counter - 1, 0, -1):
+        if i > 1:
             string += "J" + str(i) + " * "
         else:
-            string += "invJ" + str(i)
+            string += "J" + str(i)
     print(string)
     printMatrix(inversL, "inverse L")
+    print("-----------------------------")
     print("U = invL * A")
     U = multMat(inversL, mat)  # calculate the U matrix
     inversU, counter = FromUpperToInvers(U, createIdentityMatrix(len(U)))  # calculate thr inverse of U
+    print("-----------------------------")
     string = "inverse U = "
-    for i in range(counter + 1, 0, -1):
-        if i < counter:
-            string += "E" + str(i) + " * "
-        else:
-            string += "E" + str(i) + "U"
+    for i in range(counter - 1, 0, -1):
+        string += "E" + str(i) + " * "
+    string += "U"
     print(string)
+    printMatrix(U, "U")  # print the U matrix
+    print("-----------------------------")
+    print("x = invU * invL * b")
     x = multMat(inversL, b)  # finding the result vector
     x = multMat(inversU, x)  # finding the result vector
-    printMatrix(U, "U")  # print the U matrix
-    print("x = invU * invL * b")
-    print("X = ")
-    printMatrix(x)  # print the X matrix
+    printMatrix(x, "x")  # print the X matrix
     return x
 
 
-def FromUpperToInvers(A, inverseMat):
+def FromUpperToInvers(A, inverseMat, counter=1):
     """
     :param A: upper matrix
     :param inverseMat: the matrix that will become the inverse
     :return: Inverse matrix
     """
     elemntarMat = createIdentityMatrix(len(A))  # identity matrix
-    counter = 1
     for i in range(len(A) - 1, -1, -1):  # run over the columns
         for j in range(i):  # run over the lines above the pivot
             elemntarMat[j][i] = -(A[j][i] / A[i][i])
             A = multMat(elemntarMat, A)
             inverseMat = multMat(elemntarMat, inverseMat)
             printMatrix(elemntarMat, "E" + str(counter))
+            counter += 1
             elemntarMat[j][i] = 0
         if A[i][i] != 1:  # convert the pivots to one
             elemntarMat[i][i] = 1 / A[i][i]
             A = multMat(elemntarMat, A)
             inverseMat = multMat(elemntarMat, inverseMat)
+            printMatrix(elemntarMat, "E" + str(counter))
+            counter += 1
             elemntarMat[i][i] = 1
-        counter += 1
     return inverseMat, counter
 
 
@@ -159,15 +162,16 @@ def GausssElimination(A, b):
     :param b: the solution vector
     :return: none
     """
+    print("** Gauss Elimination **")
     tempMatrix = Invers(A)  # A^(-1)
     condA = infinityNorma(tempMatrix)  # calculate the infinity norma of A^(-1)
-    print("A^(-1) = ")
-    printMatrix(tempMatrix)  # print the inverse A
+    printMatrix(tempMatrix, "inverse A")  # print the inverse A
     tempMatrix = multMat(tempMatrix, b)
-    print("x = ")
-    printMatrix(tempMatrix)  # print x vector
+    printMatrix(tempMatrix, "x")  # print x vector
     condA *= infinityNorma(A)  # calculate the infinity norma of A and find condA
+    print("-----------------------------")
     print("condA = " + str(condA))
+    print("-----------------------------")
     return tempMatrix
 
 
@@ -199,9 +203,54 @@ def Invers(A):
     :param A: a list - matrix
     :return: the invers of the matrix
     """
-    inverseMat = toUpperWithPivoting(A)  # return the multiplication of the elementary matrices that create U
+    if det(A) is 0:
+        print("A is singular")
+        return
+    inverseMat, counter = toUpperWithPivoting(A)  # return the multiplication of the elementary matrices that create U
+    printMatrix(inverseMat, "E" + str(counter))
+    counter += 1
     tempMatrix = multMat(inverseMat, A)  # upper triangle matrix
-    return FromUpperToInvers(tempMatrix, inverseMat)  # return inverse matrix
+    mat, c = FromUpperToInvers(tempMatrix, inverseMat, counter)  # return inverse matrix
+    return mat
+
+
+def det(A):
+    """
+    :param A: a square matrix
+    :return: the determinant of A
+    """
+    if len(A[0]) is not len(A):  # check if A is a square matrix
+        return None
+    if len(A) == 2:  # if the matrix size is 2*2
+        return (A[0][0] * A[1][1]) - (A[0][1] * A[1][0])
+    sum = 0  # will save the determinant
+    for j in range(len(A)):
+        sum += (-1) ** (0 + j) * A[0][j] * det(minor(A, 0, j))
+    return sum
+
+
+def minor(A, i, j):
+    """
+    :param A: a square matrix
+    :param i: a row index for the minor
+    :param j: a column index for the minor
+    :return: the minor that is created from deleting row i and column j from A
+    """
+    matSize = len(A)
+    mat = newMat(matSize - 1, matSize - 1)  # the mat for the minor
+    iMinor = 0
+    jMinor = 0
+    for iIndex in range(matSize):  # go over the rows of the matrix
+        for jIndex in range(matSize):  # go over the columns of the matrix
+            if iIndex == i:  # don't copy the row we want to delete
+                iMinor -= 1
+                break
+            elif jIndex != j:  # don't copy the row we want to delete
+                mat[iMinor][jMinor] = A[iIndex][jIndex]  # copy the rest of the elements in the matrix
+                jMinor += 1
+        jMinor = 0
+        iMinor += 1
+    return mat
 
 
 def toUpperWithPivoting(A):
@@ -210,6 +259,7 @@ def toUpperWithPivoting(A):
     :return: the multiplication of the elementary matrics that create U
     """
     InL = createIdentityMatrix(len(A))  # creating a identity matrix
+    counter = 1
     for i in range(len(A) - 1):  # run over the columns
         maxPivot = abs(A[i][i])
         lineIndex = i
@@ -217,15 +267,20 @@ def toUpperWithPivoting(A):
             if abs(A[j][i]) > maxPivot:  # if the element is greater then the pivot
                 maxPivot = abs(A[j][i])
                 lineIndex = j
-        InL = multMat((linesExchange(A, i, lineIndex)), InL)
-        A = multMat((linesExchange(A, i, lineIndex)), A)
+        elementary = linesExchange(A, i, lineIndex)
+        InL = multMat(elementary, InL)
+        printMatrix(elementary, "E" + str(counter))
+        counter += 1
+        A = multMat(elementary, A)
         if A[i][i] != 0:  # check if B is regular
             for j in range(i + 1, len(A)):  # run over the lines
                 identity = createIdentityMatrix(len(A))  # creating identity matrix
                 identity[j][i] = -(A[j][i] / A[i][i])  # elementary matrix
+                printMatrix(identity, "E" + str(counter))
+                counter += 1
                 InL = multMat(identity, InL)  # L^(-1)
                 A = multMat(identity, A)
-    return InL
+    return InL, counter
 
 
 def multMat(A, B):
@@ -243,27 +298,6 @@ def multMat(A, B):
         return C
     else:
         return None  # the multiplication  is impossible
-
-
-def FromUpperToInvers(A, inverseMat):
-    """
-    :param A: upper matrix
-    :param inverseMat: the matrix that will become the inverse
-    :return: Inverse matrix
-    """
-    elemntarMat = createIdentityMatrix(len(A))  # identity matrix
-    for i in range(len(A) - 1, -1, -1):  # run over the columns
-        for j in range(i):  # run over the lines above the pivot
-            elemntarMat[j][i] = -(A[j][i] / A[i][i])
-            A = multMat(elemntarMat, A)
-            inverseMat = multMat(elemntarMat, inverseMat)
-            elemntarMat[j][i] = 0
-        if A[i][i] != 1:  # convert the pivots to one
-            elemntarMat[i][i] = 1 / A[i][i]
-            A = multMat(elemntarMat, A)
-            inverseMat = multMat(elemntarMat, inverseMat)
-            elemntarMat[i][i] = 1
-    return inverseMat
 
 
 def createIdentityMatrix(size):
@@ -302,48 +336,48 @@ def linesExchange(A, line1, line2):
 
 ##############################################
 
-# ############### 2nd method ############### #
-# def iterativGuassSeidel(A, b, epsilon, flagD):
-#     """
-#     :param A: a matrix
-#     :param b: the result vector
-#     :param epsilon: the mistake
-#     :param flagD: tell us if the system have dominant diagonal
-#     :return: vector x if found
-#     """
-#     print("** Iterative Guass Seidel **")
-#     flagC = False  # flagC = false if the linear equations does not converge
-#     x = newMat(len(b), 1)  # create the result vector
-#     print("The results are:\nThe first guess is: ")
-#     printMatrix(x)
-#     for _ in range(99):  # max number of iterations is 99
-#         oldX1 = x[0][0]  # copy the old x value of the current iteration
-#         for i in range(len(x)):  # go over the all variables
-#             if A[i][i] == 0:  # preventing division by zero
-#                 return None
-#             temp = b[i][0] / A[i][i]
-#             for j in range(len(x)):  # calculate the value of the variable in the new iteration
-#                 if i != j:
-#                     temp -= (A[i][j] * x[j][0]) / A[i][i]
-#             x[i][0] = temp  # update the calculated value
-#         print("The result of the " + str(_ + 1) + " iteration is: ")
-#         printMatrix(x)
-#         if abs(oldX1 - x[0][0]) < epsilon:  # check stop condition
-#             flagC = True
-#             break
-#     if flagC is True:
-#         print("***********")  # print final results
-#         if flagD is False:
-#             print("Although there is no dominant diagonal, the results are: \n")
-#         print("The final result is: x = ")
-#         printMatrix(x)
-#         print("The number of the iteration is : " + str(_ + 1))
-#         return x
-#     else:
-#         print("The system of linear equations does not converge :(")
+# ############### 3rd method ############### #
+def iterativGuassSeidel(A, b, epsilon, flagD):
+    """
+    :param A: a matrix
+    :param b: the result vector
+    :param epsilon: the mistake
+    :param flagD: tell us if the system have dominant diagonal
+    :return: vector x if found
+    """
+    print("** Iterative Guass Seidel **")
+    flagC = False  # flagC = false if the linear equations does not converge
+    x = newMat(len(b), 1)  # create the result vector
+    print("The results are:\nThe first guess is: ")
+    printMatrix(x)
+    for _ in range(99):  # max number of iterations is 99
+        oldX1 = x[0][0]  # copy the old x value of the current iteration
+        for i in range(len(x)):  # go over the all variables
+            if A[i][i] == 0:  # preventing division by zero
+                return None
+            temp = b[i][0] / A[i][i]
+            for j in range(len(x)):  # calculate the value of the variable in the new iteration
+                if i != j:
+                    temp -= (A[i][j] * x[j][0]) / A[i][i]
+            x[i][0] = temp  # update the calculated value
+        print("The result of the " + str(_ + 1) + " iteration is: ")
+        printMatrix(x)
+        if abs(oldX1 - x[0][0]) < epsilon:  # check stop condition
+            flagC = True
+            break
+    if flagC is True:
+        print("***********")  # print final results
+        if flagD is False:
+            print("Although there is no dominant diagonal, the results are: \n")
+        print("The final result is: x = ")
+        printMatrix(x)
+        print("The number of the iteration is : " + str(_ + 1))
+        return x
+    else:
+        print("The system of linear equations does not converge :(")
 
 
-# ############### 2nd method ############### #0
+# ############### 3rd method ############### #0
 
 
 def printMatrix(a, name=None):
@@ -361,7 +395,7 @@ def printMatrix(a, name=None):
             print("[" + str(a[i]))
         else:
             print(" " + str(a[i]))
-    print("-----------------------------")
+    print("")
 
 
 def newMat(numRow, numCol):
@@ -494,25 +528,26 @@ def rowSum(line):
 # end dominant part
 
 
-def checkDifferPart3(l, d, epsilon):
+def checkDifferPart3(l, d, name1, name2, epsilon):
     print("check the difference between the methods:")
     flag = True
     for i in range(len(l)):
-        print("Root - LUdecomposition: " + str(l[i][0]) + "\nRoot - GausssElimination: " + str(d[i][0]))
+        print("x" + str(i + 1) + " - " + name1 + ": " + str(l[i][0]) + "\nx" +
+              str(i + 1) + " - " + name2 + ": " + str(d[i][0]))
         if abs(l[i][0] - d[i][0]) > epsilon:
             flag = False
-            print("The difference is bigger than the epsilon for some of the roots")
+            print("The difference is bigger than epsilon for some of the components\n")
             return
-    print("The difference is smaller than the epsilon for all the roots")
+    print("The difference is smaller than epsilon for all the components\n")
 
 
 def calcFinalResult(result, epsilon, day, hour, minutes):
     """
     :param result: the result
     :param epsilon: the epsilon we decided on for the question
-    :param day: the day of the calculation
-    :param hour: the hour of the calculation
-    :param minutes: the minutes of the calculation
+    :param day: the day of the calculation in str
+    :param hour: the hour of the calculation in str
+    :param minutes: the minutes of the calculation in str
     :return: the result by the requested format
     """
     stringRes = str(result)  # cast the result to string
@@ -526,6 +561,20 @@ def calcFinalResult(result, epsilon, day, hour, minutes):
         count += 1
     stringRes = stringRes[:i + count] + "00000" + day + hour + minutes
     return stringRes
+
+
+def calcFinalResultVector(vector, name, epsilon, day, hour, minutes):
+    """
+    :param vector: vector x
+    :param epsilon: allowed error
+    :param day: dd
+    :param hour: hh
+    :param minutes: mm
+    :return: prints the formatted result vector x
+    """
+    for i in range(len(vector)):
+        vector[i][0] = calcFinalResult(vector[i][0], epsilon, day, hour, minutes)
+    printMatrix(vector, name + " - Final Result in Format")
 
 
 # ############## main ###############
@@ -545,7 +594,9 @@ def driver():
     epsilon = 10 ** (-4)
 
     flagDom = dominantDiagonal(A)  # check if there is a dominant diagonal
-
+    name1 = "LUdecomposition"
+    name2 = "iterativGuassSeidel"
+    name3 = "GausssElimination"
     # check
     if flagDom is False:
         copyA = copyMat(A)
@@ -558,8 +609,13 @@ def driver():
 
         # end check
     x1 = LUdecomposition(A, b)
-    x2 = GausssElimination(A, b)
-    checkDifferPart3(x1, x2, epsilon)
+    x2 = iterativGuassSeidel(A, b, epsilon, flagDom)
+    x3 = GausssElimination(A, b)
+    checkDifferPart3(x1, x2, name1, name2, epsilon)
+    checkDifferPart3(x1, x3, name1, name3, epsilon)
+    calcFinalResultVector(x1, name1, epsilon, "14", "00", "40")
+    calcFinalResultVector(x2, name2, epsilon, "14", "00", "41")
+    calcFinalResultVector(x3, name3, epsilon, "14", "00", "42")
 
 
 driver()
