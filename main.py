@@ -3,20 +3,40 @@
 def LUdecomposition(mat, b):
     """
     :param mat: the coefficients matrix
-    :param b:  the solution vector
+    :param b: the solution vector
     :return: none
     """
-    inversL, L = toUpperTriangularMat(mat)  # calculate the L matrix and the inverse L
+    inversL, L, counter = toUpperTriangularMat(mat)  # calculate the L matrix and the inverse L
+    string = "L = "
+    for i in range(1, counter):
+        if i < counter - 1:
+            string += "invJ" + str(i) + " * "
+        else:
+            string += "invJ" + str(i)
+    print(string)
+    printMatrix(L, "L")  # print the L matrix
+    string = "inverse L = "
+    for i in range(counter + 1, 0, -1):
+        if i < counter:
+            string += "J" + str(i) + " * "
+        else:
+            string += "invJ" + str(i)
+    print(string)
+    printMatrix(inversL, "inverse L")
+    print("U = invL * A")
     U = multMat(inversL, mat)  # calculate the U matrix
-    inversU = FromUpperToInvers(U, createIdentityMatrix(len(U)))  # calculate thr inverse of U
+    inversU, counter = FromUpperToInvers(U, createIdentityMatrix(len(U)))  # calculate thr inverse of U
+    string = "inverse U = "
+    for i in range(counter + 1, 0, -1):
+        if i < counter:
+            string += "E" + str(i) + " * "
+        else:
+            string += "E" + str(i) + "U"
+    print(string)
     x = multMat(inversL, b)  # finding the result vector
     x = multMat(inversU, x)  # finding the result vector
-    print("inverse A = ")
-    printMatrix(multMat(inversU, inversL))
-    print("L = ")
-    printMatrix(L)  # print the L matrix
-    print("U = ")
-    printMatrix(U)  # print the U matrix
+    printMatrix(U, "U")  # print the U matrix
+    print("x = invU * invL * b")
     print("X = ")
     printMatrix(x)  # print the X matrix
     return x
@@ -29,18 +49,21 @@ def FromUpperToInvers(A, inverseMat):
     :return: Inverse matrix
     """
     elemntarMat = createIdentityMatrix(len(A))  # identity matrix
+    counter = 1
     for i in range(len(A) - 1, -1, -1):  # run over the columns
         for j in range(i):  # run over the lines above the pivot
             elemntarMat[j][i] = -(A[j][i] / A[i][i])
             A = multMat(elemntarMat, A)
             inverseMat = multMat(elemntarMat, inverseMat)
+            printMatrix(elemntarMat, "E" + str(counter))
             elemntarMat[j][i] = 0
         if A[i][i] != 1:  # convert the pivots to one
             elemntarMat[i][i] = 1 / A[i][i]
             A = multMat(elemntarMat, A)
             inverseMat = multMat(elemntarMat, inverseMat)
             elemntarMat[i][i] = 1
-    return inverseMat
+        counter += 1
+    return inverseMat, counter
 
 
 def toUpperTriangularMat(A):
@@ -50,23 +73,31 @@ def toUpperTriangularMat(A):
     """
     L = createIdentityMatrix(len(A))  # create indetity matrix
     InL = createIdentityMatrix(len(A))  # create indetity matrix
+    counter = 1
     for i in range(len(A)):  # run over the lines
         if A[i][i] == 0:  # if the pivot is 0
             for j in range(i + 1, len(A)):  # run over the columns
                 if A[j][i] != 0:  # if the element under the pivot is not 0
-                    L = multMat((L, linesExchange(A, i, j)))  # make lines exchange and multiply
+                    elementary = linesExchange(A, i, j)
+                    L = multMat(L, elementary)  # make lines exchange and multiply
+                    printMatrix(elementary, "J" + str(counter))
                     InL = multMat((linesExchange(A, i, j)), InL)  # make lines exchange and multiply
+                    printMatrix(identity, "inverse J" + str(counter))
                     A = multMat((linesExchange(A, i, j)), A)
+                    counter += 1
                     break
         if A[i][i] != 0:  # check if B is regular
             for j in range(i + 1, len(A)):  # run over the columns
                 identity = createIdentityMatrix(len(A))
                 identity[j][i] = -(A[j][i] / A[i][i])  # elementary matrix
+                printMatrix(identity, "J" + str(counter))
                 InL = multMat(identity, InL)  # L^(-1)
                 A = multMat(identity, A)
                 identity[j][i] *= -1  # changing the element in order to find L
+                printMatrix(identity, "inverse J" + str(counter))
                 L = multMat(L, identity)
-    return InL, L
+                counter += 1
+    return InL, L, counter
 
 
 def linesExchange(A, line1, line2):
@@ -266,6 +297,7 @@ def linesExchange(A, line1, line2):
     idendityMax[line1][line2] = temp
     return idendityMax
 
+
 # ############### 2nd method ############### #
 
 ##############################################
@@ -311,15 +343,17 @@ def linesExchange(A, line1, line2):
 #         print("The system of linear equations does not converge :(")
 
 
-# ############### 2nd method ############### #
+# ############### 2nd method ############### #0
 
 
-def printMatrix(a):
+def printMatrix(a, name=None):
     """
     :param a: a matrix to print
     :return: prints in matrix format
     """
     print("-----------------------------")
+    if name is not None:
+        print(name + " = ")
     for i in range(len(a)):
         if i is len(a) - 1:
             print(" " + str(a[i]) + "]")
@@ -470,6 +504,28 @@ def checkDifferPart3(l, d, epsilon):
             print("The difference is bigger than the epsilon for some of the roots")
             return
     print("The difference is smaller than the epsilon for all the roots")
+
+
+def calcFinalResult(result, epsilon, day, hour, minutes):
+    """
+    :param result: the result
+    :param epsilon: the epsilon we decided on for the question
+    :param day: the day of the calculation
+    :param hour: the hour of the calculation
+    :param minutes: the minutes of the calculation
+    :return: the result by the requested format
+    """
+    stringRes = str(result)  # cast the result to string
+    i = 0
+    while stringRes[i] is not ".":  # run over the string while we get to the point
+        i += 1  # count how many digits there is before the point
+    i += 1
+    count = 1
+    while epsilon < 1:  # checking how digit needs after the point
+        epsilon *= 10
+        count += 1
+    stringRes = stringRes[:i + count] + "00000" + day + hour + minutes
+    return stringRes
 
 
 # ############## main ###############
